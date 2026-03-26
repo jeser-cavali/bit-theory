@@ -71,21 +71,45 @@ void playFolder(std::string& folderpath) {
     //customize terminal
     std::cout << "\033[?25l";                //hide cursor
     std::cout << "\033]0;String-Theory\007"; //window name
-    std::cout << "\033[8;2;80t";             //window size
+    //std::cout << "\033[8;2;80t";             //window size
 
     //set UTF-8 characters for display on console
     SetConsoleOutputCP(CP_UTF8);
     std::setlocale(LC_ALL, ".UTF8");
 
     //keyboard input references
-    constexpr int ENTER = 13;
     constexpr int SPACEBAR = 32;
+
+    //---[WINDOWS SPECIFIC INPUTS]
+    constexpr int ENTER = 13;
+
     constexpr int UP = 72;
     constexpr int DOWN = 80;
     constexpr int LEFT = 75;
     constexpr int RIGHT = 77;
+
     constexpr int EXTENTION_IDENTIFIER_A = 0;
     constexpr int EXTENTION_IDENTIFIER_B = 224;
+
+    //--- [POSIX SPECIFIC INPUTS]
+    constexpr int POSIX_ENTER = 10;
+
+    constexpr int POSIX_UP = 65;
+    constexpr int POSIX_DOWN = 66;
+    constexpr int POSIX_LEFT = 67;
+    constexpr int POSIX_RIGHT = 68;
+
+    constexpr int POSIX_EXTENTION_A = 27;
+    constexpr int POSIX_EXTENTION_B = 91;
+
+    //TODO(make two hash tables (one for POSIX and one for WINDOWS) where input_code = key and input_name = value)
+    //TODO(then the input logic should be as follows:)
+    //  read input
+    //  #ifdef _WIN32 search windows input table
+    //  #else search posix table
+    //  then do the according action
+    //
+    //  { maybe i should make a custom input function }
 
     std::vector<std::filesystem::path> playlist = scrapeFolder(folderpath);
     if (playlist.empty()) {

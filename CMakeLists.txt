@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 4.1)
-project(untitled)
+project(String-Theory)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(untitled main.cpp
+add_executable(String-Theory main.cpp
         include/miniaudio.h
         include/id3.h
         include/tools.h
@@ -14,4 +14,4 @@ add_executable(untitled main.cpp
         resources.rc
 )
 
-target_include_directories(untitled PRIVATE include)
+target_include_directories(String-Theory PRIVATE include)
