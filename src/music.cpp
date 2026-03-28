@@ -73,6 +73,8 @@ void playFolder(std::string& folderpath) {
 
     #ifdef _WIN32
 
+    SetConsoleOutputCP(CP_UTF8);
+
     constexpr int ENTER = 13;
     constexpr int ARROW_UP = 72;
     constexpr int ARROW_DOWN = 80;
@@ -86,8 +88,8 @@ void playFolder(std::string& folderpath) {
     constexpr int ENTER = 10;
     constexpr int ARROW_UP = 65;
     constexpr int ARROW_DOWN = 66;
-    constexpr int ARROW_LEFT = 67;
-    constexpr int ARROW_RIGHT = 68;
+    constexpr int ARROW_LEFT = 68;
+    constexpr int ARROW_RIGHT = 67;
     constexpr int IDENTIFIER_A = 27;
     constexpr int IDENTIFIER_B = 91;
 
@@ -100,7 +102,6 @@ void playFolder(std::string& folderpath) {
     //std::cout << "\033[8;2;80t";             //window size
 
     //set UTF-8 characters for display on console
-    SetConsoleOutputCP(CP_UTF8);
     std::setlocale(LC_ALL, ".UTF8");
 
     std::unordered_map<int, std::string> keymapping = {
@@ -122,7 +123,7 @@ void playFolder(std::string& folderpath) {
     song.paused = false;
 
     //setup encoder config
-    ma_decoder_config decoder_config = ma_decoder_config_init(ma_format_f32, 0, 0);
+    ma_decoder_config decoder_config = ma_decoder_config_init(ma_format_f32, 2, 44100);
 
     //check if it worked
     if (init_decoder_from_path(playlist[currentTrackIndex], &decoder_config, &song.decoder) != MA_SUCCESS) {
@@ -189,7 +190,6 @@ void playFolder(std::string& folderpath) {
         //input block
         if (_kbhit()) {
             int key = _getch();
-
             switch (key) {
                 case SPACE:
                     if (!song.paused.load()) {
@@ -253,10 +253,11 @@ void playFolder(std::string& folderpath) {
                             }
                             break;
                         }
-                        case ARROW_RIGHT:
+                        case ARROW_RIGHT: {
                             clearScreen();
                             song.finished.store(true);
                             break;
+                        }
                         default:
                             break;
                     }
@@ -264,65 +265,60 @@ void playFolder(std::string& folderpath) {
                 }
 
                 #else
+                    case IDENTIFIER_A: {
+                    int second_key = _getch();
+                    if (second_key == IDENTIFIER_B) {
+                        switch (int extention = _getch()) {
+                            case ARROW_UP: {
+                                float vol = song.volume.load();
+                                if (vol < 1.0f) {
+                                    song.volume.store(std::min(vol + 0.1f, 1.0f));
+                                    clearScreen();
+                                    std::cout << "[" << currentTrackIndex + 1  << "/"  << playlist.size() << "] Playing " << song.title << " by " << song.artist << " <volume: " << (song.volume * 100) << ">" << std::endl;
+                                }
+                                break;
+                            }
+                            case ARROW_DOWN: {
+                                if (song.volume > 0.0f) {
+                                    float vol = song.volume.load();
+                                    vol -= 0.1f;
+                                    if (vol < 0.05) { vol = 0.0f; }
+                                    vol = std::clamp(vol, 0.0f, 1.0f);
+                                    song.volume.store(vol);
+                                    clearScreen();
+                                    std::cout << "[" << currentTrackIndex + 1  << "/"  << playlist.size() << "] Playing " << song.title << " by " << song.artist << " <volume: " << (song.volume * 100) << ">" << std::endl;
+                                }
+                                break;
+                            }
+                            case ARROW_LEFT: {
+                                ma_uint64 cursor = song.currentFrame.load();
+                                //ma_decoder_get_cursor_in_pcm_frames(&song.decoder, &cursor);
+                                double currentSecond = static_cast<double>(cursor) / song.decoder.outputSampleRate;
+                                if (currentSecond > 2.0) {
+                                    ma_device_stop(&device);
+                                    ma_decoder_seek_to_pcm_frame(&song.decoder, 0);
+                                    song.currentFrame.store(0);
+                                    ma_device_start(&device);
+                                } else if (currentSecond <= 2 && currentTrackIndex != 0){
+                                    clearScreen();
+                                    currentTrackIndex -= 2;
+                                    song.finished.store(true);
+                                }
+                                break;
+                            }
+                            case ARROW_RIGHT: {
+                                clearScreen();
+                                song.finished.store(true);
+                                break;
+                            }
+                            default:
+                                break;
+                        }
+                    }
+                    break;
+                }
                 #endif
             }
-
-            /*
-            if (key == ENTER) {
-                clearScreen();
-                std::cout << "Exiting..." << std::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                break;
-            } else if (key == SPACEBAR) {
-                if (!song.paused.load()) {
-                    clearScreen();
-                    std::cout << "<paused>" << std::endl;
-                    ma_device_stop(&device);
-                    song.paused.store(true);
-                } else {
-                    clearScreen();
-                    std::cout << "[" << currentTrackIndex + 1  << "/"  << playlist.size() << "] Playing " << song.title << " by " << song.artist << " <volume: " << (song.volume * 100) << ">" << std::endl;
-                    ma_device_start(&device);
-                    song.paused.store(false);
-                }
-            } else if (key == EXTENTION_IDENTIFIER_A || key == EXTENTION_IDENTIFIER_B) {
-                int extendedKey = _getch();
-                if (extendedKey == LEFT) {
-                    ma_uint64 cursor = song.currentFrame.load();
-                    //ma_decoder_get_cursor_in_pcm_frames(&song.decoder, &cursor);
-                    double currentSecond = static_cast<double>(cursor) / song.decoder.outputSampleRate;
-                    if (currentSecond > 2.0) {
-                        ma_device_stop(&device);
-                        ma_decoder_seek_to_pcm_frame(&song.decoder, 0);
-                        song.currentFrame.store(0);
-                        ma_device_start(&device);
-                    } else if (currentSecond <= 2 && currentTrackIndex != 0){
-                        clearScreen();
-                        currentTrackIndex -= 2;
-                        song.finished.store(true);
-                    }
-                } else if (extendedKey == RIGHT) {
-                    clearScreen();
-                    song.finished.store(true);
-                } else if (extendedKey == UP) {
-                    float vol = song.volume.load();
-                    if (vol < 1.0f) {
-                        song.volume.store(std::min(vol + 0.1f, 1.0f));
-                        clearScreen();
-                        std::cout << "[" << currentTrackIndex + 1  << "/"  << playlist.size() << "] Playing " << song.title << " by " << song.artist << " <volume: " << (song.volume * 100) << ">" << std::endl;
-                    }
-                } else if (extendedKey == DOWN) {
-                    if (song.volume > 0.0f) {
-                        float vol = song.volume.load();
-                        vol -= 0.1f;
-                        if (vol < 0.05) { vol = 0.0f; }
-                        vol = std::clamp(vol, 0.0f, 1.0f);
-                        song.volume.store(vol);
-                        clearScreen();
-                        std::cout << "[" << currentTrackIndex + 1  << "/"  << playlist.size() << "] Playing " << song.title << " by " << song.artist << " <volume: " << (song.volume * 100) << ">" << std::endl;
-                    }
-                }
-            }*/
         }
 
 
