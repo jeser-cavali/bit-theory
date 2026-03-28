@@ -12,6 +12,8 @@ add_executable(String-Theory main.cpp
         src/music.cpp
         src/tools.cpp
         resources.rc
+        src/input.cpp
+        include/input.h
 )
 
 target_include_directories(String-Theory PRIVATE include)
