@@ -9,6 +9,3 @@ The new project will feature:
 - Discord bot style inputs
 - Actual C++ code
 - QOL changes
-
-**The new project will be** * *for now* * **Windows only.**  
-You can find String-theory in the [link](https://github.com/jeser-cavali/string-theory.git).
